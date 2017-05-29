@@ -1,0 +1,21 @@
+[package]
+authors = ["Richard Diamond <wichard@vitalitystudios.com>", "Kornel Lesiński <kornel@geekhood.net>"]
+build = "build.rs"
+description = "Rust bindings to libvpx"
+homepage = "https://github.com/pornel/rust-vpx/tree/master/src/sys"
+license = "MPL-2.0"
+links = "vpx"
+name = "libvpx-native-sys"
+repository = "https://github.com/pornel/rust-vpx"
+version = "3.0.3"
+
+[build-dependencies]
+bindgen = "0.22.1"
+pkg-config = "0.3.5"
+
+[dependencies]
+libc = "0.2.20"
+
+[lib]
+name = "vpx_sys"
+path = "lib.rs"
