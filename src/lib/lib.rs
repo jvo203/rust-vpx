@@ -24,7 +24,7 @@ pub enum Error {
     ListEnd,
 }
 
-use ffi::vpx_codec_err_t as ErrorEnum;
+use crate::ffi::vpx_codec_err_t as ErrorEnum;
 impl From<ErrorEnum> for Error {
     fn from(v: ErrorEnum) -> Error {
         match v {
@@ -94,9 +94,9 @@ pub enum Format {
 }
 impl Into<ffi::vpx_img_fmt_t> for Format {
     fn into(self) -> ffi::vpx_img_fmt_t {
-        use Format::*;
+        use crate::Format::*;
 
-        use ffi::vpx_img_fmt::*;
+        use crate::ffi::vpx_img_fmt::*;
         match self {
             RGB24 => VPX_IMG_FMT_RGB24,
             RGB32 { le: false, } => VPX_IMG_FMT_RGB32,
@@ -146,7 +146,7 @@ pub enum ColorSpace {
 }
 impl Into<ffi::vpx_color_space_t> for ColorSpace {
     fn into(self) -> ffi::vpx_color_space_t {
-        use ffi::vpx_color_space::*;
+        use crate::ffi::vpx_color_space::*;
         match self {
             ColorSpace::BT601 => VPX_CS_BT_601,
             ColorSpace::BT709 => VPX_CS_BT_709,
@@ -248,10 +248,10 @@ impl<'a> From<&'a ffi::vpx_codec_cx_pkt__bindgen_ty_1__bindgen_ty_1> for Frame<'
     }
 }
 
-pub use ffi::vpx_rc_mode::*;
-pub use ffi::vpx_bit_depth::*;
-pub use ffi::vpx_codec_err_t::*;
-pub use ffi::vpx_rational;
+pub use crate::ffi::vpx_rc_mode::*;
+pub use crate::ffi::vpx_bit_depth::*;
+pub use crate::ffi::vpx_codec_err_t::*;
+pub use crate::ffi::vpx_rational;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Kind {
