@@ -1,5 +1,6 @@
 [package]
 authors = ["Richard Diamond <wichard@vitalitystudios.com>", "Kornel Lesiński <kornel@geekhood.net>"]
+edition = "2021"
 build = "build.rs"
 categories = ["multimedia::video", "multimedia::encoding", "api-bindings"]
 description = "Rust bindings to libvpx"
