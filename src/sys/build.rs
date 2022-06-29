@@ -37,11 +37,11 @@ fn parse(version: &str) -> Result<Version, String> {
     let version = version.split('-').next().unwrap();
     match version::parse(version) {
         Ok(ver) => Ok(ver),
-        Err(err) => {
+        Err(err.to_string()) => {
             if let Ok(zero_ver) = version::parse(&format!("{}.0", version)) {
                 Ok(zero_ver)
             } else {
-                Err(err)
+                Err(err.to_string())
             }
         },
     }
@@ -50,7 +50,7 @@ fn parse(version: &str) -> Result<Version, String> {
 fn copy_pregenerated(gen_dir: &Path, ffi_rs: &Path, exact_file: &Path, version: &str) -> bool {
     let wanted_semver = match parse(version) {
         Ok(ver) => ver,
-        Err(err) => {
+        Err(err.to_string()) => {
             println!("cargo:warning=libvpx has unsupported version {} {}", version, err);
             return false;
         },
@@ -71,7 +71,7 @@ fn copy_pregenerated(gen_dir: &Path, ffi_rs: &Path, exact_file: &Path, version: 
                 }
                 let ver = match parse(&base_name["vpx-ffi-".len()..]) {
                     Ok(ver) => ver,
-                    Err(err) => {
+                    Err(err.to_string()) => {
                         println!("cargo:warning=Ignored pregenerated {} {}", err, base_name);
                         return None;
                     },
