@@ -138,7 +138,6 @@ fn generate_bindings(
 ) {
     let mut b = bindgen::builder()
         .header(ffi_header.to_str().unwrap())
-        //.rust_target(bindgen::RustTarget::stable)
         .allowlist_type("^[vV].*")
         .allowlist_var("^[vV].*")
         .allowlist_function("^[vV].*")
