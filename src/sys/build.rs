@@ -28,8 +28,16 @@ pub fn main() {
     let gen_dir = src_dir.join("generated");
     let exact_file = gen_dir.join(format!("vpx-ffi-{}.rs", libvpx.version));
 
-    if cfg!(feature = "generate") || !copy_pregenerated(&gen_dir, &ffi_rs, &exact_file, &libvpx.version) {
-        generate_bindings(&ffi_header, &libvpx.include_paths, &ffi_rs, &exact_file, &libvpx.version);
+    if cfg!(feature = "generate")
+        || !copy_pregenerated(&gen_dir, &ffi_rs, &exact_file, &libvpx.version)
+    {
+        generate_bindings(
+            &ffi_header,
+            &libvpx.include_paths,
+            &ffi_rs,
+            &exact_file,
+            &libvpx.version,
+        );
     }
 }
 
@@ -43,7 +51,7 @@ fn parse(version: &str) -> Result<Version, String> {
             } else {
                 Err(err.to_string())
             }
-        },
+        }
     }
 }
 
@@ -51,30 +59,34 @@ fn copy_pregenerated(gen_dir: &Path, ffi_rs: &Path, exact_file: &Path, version: 
     let wanted_semver = match parse(version) {
         Ok(ver) => ver,
         Err(err) => {
-            println!("cargo:warning=libvpx has unsupported version {} {}", version, err);
+            println!(
+                "cargo:warning=libvpx has unsupported version {} {}",
+                version, err
+            );
             return false;
-        },
+        }
     };
 
     if exact_file.exists() && fs::copy(&exact_file, ffi_rs).is_ok() {
         return true;
     }
 
-    let closest_match = fs::read_dir(gen_dir).unwrap()
+    let closest_match = fs::read_dir(gen_dir)
+        .unwrap()
         .filter_map(|e| e.ok())
         .map(|e| e.path())
         .filter_map(|path| {
             let diff = path.file_stem().and_then(|base_name| {
                 let base_name = base_name.to_string_lossy();
                 if !base_name.starts_with("vpx-ffi-") {
-                    return None
+                    return None;
                 }
                 let ver = match parse(&base_name["vpx-ffi-".len()..]) {
                     Ok(ver) => ver,
                     Err(err) => {
                         println!("cargo:warning=Ignored pregenerated {} {}", err, base_name);
                         return None;
-                    },
+                    }
                 };
                 if ver.major != wanted_semver.major {
                     return None;
@@ -106,14 +118,27 @@ fn copy_pregenerated(gen_dir: &Path, ffi_rs: &Path, exact_file: &Path, version: 
 }
 
 #[cfg(not(feature = "generate"))]
-fn generate_bindings(_ffi_header: &Path, _include_paths: &[PathBuf], _ffi_rs: &Path, _exact_file: &Path, version: &str) {
+fn generate_bindings(
+    _ffi_header: &Path,
+    _include_paths: &[PathBuf],
+    _ffi_rs: &Path,
+    _exact_file: &Path,
+    version: &str,
+) {
     panic!("The 'generate' feature of libvpx-native-sys is disabled, and we don't have pre-generated bindings for libvpx version {}. Enable 'generate' feature of the 'libvpx-native-sys' crate", version);
 }
 
 #[cfg(feature = "generate")]
-fn generate_bindings(ffi_header: &Path, include_paths: &[PathBuf], ffi_rs: &Path, exact_file: &Path, _version: &str) {
-    let mut b = bindgen::builder().header(ffi_header.to_str().unwrap())
-        .rust_target(bindgen::RustTarget::Stable_1_25)
+fn generate_bindings(
+    ffi_header: &Path,
+    include_paths: &[PathBuf],
+    ffi_rs: &Path,
+    exact_file: &Path,
+    _version: &str,
+) {
+    let mut b = bindgen::builder()
+        .header(ffi_header.to_str().unwrap())
+        .rust_target(bindgen::RustTarget::Stable_1_33)
         .allowlist_type("^[vV].*")
         .allowlist_var("^[vV].*")
         .allowlist_function("^[vV].*")
@@ -126,7 +151,6 @@ fn generate_bindings(ffi_header: &Path, include_paths: &[PathBuf], ffi_rs: &Path
         b = b.clang_arg(format!("-I{}", dir.display()));
     }
 
-    b.generate().unwrap()
-        .write_to_file(ffi_rs).unwrap();
+    b.generate().unwrap().write_to_file(ffi_rs).unwrap();
     fs::copy(ffi_rs, exact_file).ok(); // ignore failure
 }
