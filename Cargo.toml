@@ -1,6 +1,6 @@
 [package]
 authors = ["Richard Diamond <wichard@vitalitystudios.com>"]
-edition = "2021"
+edition = "2024"
 categories = ["multimedia::video", "multimedia::encoding", "api-bindings"]
 description = "Rust idiomatic wrapper to libvpx"
 keywords = ["vp9", "vp8", "webm", "video-encoder", "video-decoder"]

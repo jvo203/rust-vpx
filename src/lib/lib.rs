@@ -1,12 +1,11 @@
 use std::borrow::Cow;
-use std::ffi::{CStr};
+use std::ffi::CStr;
 use std::mem::transmute;
 
-extern crate vpx_sys as ffi;
 extern crate libc;
+extern crate vpx_sys as ffi;
 
 pub mod encoder;
-
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum Error {
@@ -43,7 +42,7 @@ impl From<ErrorEnum> for Error {
 
 impl std::fmt::Display for Error {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-        <Self as std::fmt::Debug>::fmt(self,fmt)
+        <Self as std::fmt::Debug>::fmt(self, fmt)
     }
 }
 impl std::error::Error for Error {
@@ -68,9 +67,15 @@ pub type Rect = ffi::vpx_image_rect_t;
 #[allow(non_camel_case_types)]
 pub enum Format {
     RGB24,
-    RGB32 { le: bool, },
-    RGB565 { le: bool, },
-    RGB555 { le: bool, },
+    RGB32 {
+        le: bool,
+    },
+    RGB565 {
+        le: bool,
+    },
+    RGB555 {
+        le: bool,
+    },
 
     UYVY,
     YUY2,
@@ -84,10 +89,18 @@ pub enum Format {
 
     YV12,
 
-    I420 { hi_bit_depth: bool },
-    I422 { hi_bit_depth: bool },
-    I440 { hi_bit_depth: bool },
-    I444 { hi_bit_depth: bool },
+    I420 {
+        hi_bit_depth: bool,
+    },
+    I422 {
+        hi_bit_depth: bool,
+    },
+    I440 {
+        hi_bit_depth: bool,
+    },
+    I444 {
+        hi_bit_depth: bool,
+    },
 
     /// Should be named `444A`.
     I444A,
@@ -99,12 +112,12 @@ impl Into<ffi::vpx_img_fmt_t> for Format {
         use crate::ffi::vpx_img_fmt::*;
         match self {
             RGB24 => VPX_IMG_FMT_RGB24,
-            RGB32 { le: false, } => VPX_IMG_FMT_RGB32,
-            RGB32 { le: true, } => VPX_IMG_FMT_RGB32_LE,
-            RGB565 { le: false, } => VPX_IMG_FMT_RGB565,
-            RGB565 { le: true, } => VPX_IMG_FMT_RGB565_LE,
-            RGB555 { le: false, } => VPX_IMG_FMT_RGB555,
-            RGB555 { le: true, } => VPX_IMG_FMT_RGB555_LE,
+            RGB32 { le: false } => VPX_IMG_FMT_RGB32,
+            RGB32 { le: true } => VPX_IMG_FMT_RGB32_LE,
+            RGB565 { le: false } => VPX_IMG_FMT_RGB565,
+            RGB565 { le: true } => VPX_IMG_FMT_RGB565_LE,
+            RGB555 { le: false } => VPX_IMG_FMT_RGB555,
+            RGB555 { le: true } => VPX_IMG_FMT_RGB555_LE,
 
             UYVY => VPX_IMG_FMT_UYVY,
             YUY2 => VPX_IMG_FMT_YUY2,
@@ -118,17 +131,25 @@ impl Into<ffi::vpx_img_fmt_t> for Format {
 
             YV12 => VPX_IMG_FMT_YV12,
 
-            I420 { hi_bit_depth: false } => VPX_IMG_FMT_I420,
-            I422 { hi_bit_depth: false } => VPX_IMG_FMT_I422,
-            I440 { hi_bit_depth: false } => VPX_IMG_FMT_I444,
-            I444 { hi_bit_depth: false } => VPX_IMG_FMT_I440,
+            I420 {
+                hi_bit_depth: false,
+            } => VPX_IMG_FMT_I420,
+            I422 {
+                hi_bit_depth: false,
+            } => VPX_IMG_FMT_I422,
+            I440 {
+                hi_bit_depth: false,
+            } => VPX_IMG_FMT_I444,
+            I444 {
+                hi_bit_depth: false,
+            } => VPX_IMG_FMT_I440,
 
             I420 { hi_bit_depth: true } => VPX_IMG_FMT_I42016,
             I422 { hi_bit_depth: true } => VPX_IMG_FMT_I42216,
             I440 { hi_bit_depth: true } => VPX_IMG_FMT_I44416,
             I444 { hi_bit_depth: true } => VPX_IMG_FMT_I44016,
 
-            /// Should be named `444A`.
+            // Should be named `444A`.
             I444A => VPX_IMG_FMT_444A,
         }
     }
@@ -163,35 +184,37 @@ pub struct Image<'a>(ffi::vpx_image_t, Format, Cow<'a, [u8]>);
 impl<'a> Image<'a> {
     /// XXX this function doesn't check that `data` is long enough for the
     /// format or view size.
-    pub fn new(data: Cow<'a, [u8]>, fmt: Format,
-               color_space: ColorSpace,
-               width: u32, height: u32,
-               stride: u32) -> Image
-    {
+    pub fn new(
+        data: Cow<'a, [u8]>,
+        fmt: Format,
+        color_space: ColorSpace,
+        width: u32,
+        height: u32,
+        stride: u32,
+    ) -> Image<'a> {
         let mut t: ffi::vpx_image_t = Default::default();
         unsafe {
-            ffi::vpx_img_wrap(&mut t as *mut _,
-                              fmt.into(), width,
-                              height, stride,
-                              data.as_ptr() as *mut _);
+            ffi::vpx_img_wrap(
+                &mut t as *mut _,
+                fmt.into(),
+                width,
+                height,
+                stride,
+                data.as_ptr() as *mut _,
+            );
         };
         t.cs = color_space.into();
         Image(t, fmt, data)
     }
 
-    pub fn get_format(&self) -> Format { self.1.clone() }
+    pub fn get_format(&self) -> Format {
+        self.1.clone()
+    }
 
     pub fn set_rect(&mut self, rect: Rect) -> Result<(), ()> {
-        let res = unsafe {
-            ffi::vpx_img_set_rect(&mut self.0 as *mut _,
-                                  rect.x, rect.y,
-                                  rect.w, rect.h)
-        };
-        if res == 0 {
-            Ok(())
-        } else {
-            Err(())
-        }
+        let res =
+            unsafe { ffi::vpx_img_set_rect(&mut self.0 as *mut _, rect.x, rect.y, rect.w, rect.h) };
+        if res == 0 { Ok(()) } else { Err(()) }
     }
     pub fn flip(&mut self) {
         unsafe {
@@ -217,7 +240,9 @@ pub const FRAME_IS_DROPPABLE: u32 = 0x2;
 pub const FRAME_IS_INVISIBLE: u32 = 0x4;
 pub const FRAME_IS_FRAGMENT: u32 = 0x8;
 impl<'a> Frame<'a> {
-    pub fn data(&self) -> &'a [u8] { self.data }
+    pub fn data(&self) -> &'a [u8] {
+        self.data
+    }
 
     pub fn is_keyframe(&self) -> bool {
         self.flags & FRAME_IS_KEY != 0
@@ -234,9 +259,8 @@ impl<'a> Frame<'a> {
 }
 impl<'a> From<&'a ffi::vpx_codec_cx_pkt__bindgen_ty_1__bindgen_ty_1> for Frame<'a> {
     fn from(v: &'a ffi::vpx_codec_cx_pkt__bindgen_ty_1__bindgen_ty_1) -> Frame<'a> {
-        let data: &'a [u8] = unsafe {
-            ::std::slice::from_raw_parts(v.buf as *const u8, v.sz as usize)
-        };
+        let data: &'a [u8] =
+            unsafe { ::std::slice::from_raw_parts(v.buf as *const u8, v.sz as usize) };
 
         Frame {
             data: data,
@@ -248,10 +272,10 @@ impl<'a> From<&'a ffi::vpx_codec_cx_pkt__bindgen_ty_1__bindgen_ty_1> for Frame<'
     }
 }
 
-pub use crate::ffi::vpx_rc_mode::*;
 pub use crate::ffi::vpx_bit_depth::*;
 pub use crate::ffi::vpx_codec_err_t::*;
 pub use crate::ffi::vpx_rational;
+pub use crate::ffi::vpx_rc_mode::*;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Kind {
@@ -269,14 +293,16 @@ pub trait Interface: InternalInterface + Default {
     }
     fn kind(&self) -> Kind;
 
-    fn create(&self, cfg: <Self as Interface>::Cfg, flags: ffi::vpx_codec_flags_t) ->
-        Result<<Self as Interface>::Context, Error>;
+    fn create(
+        &self,
+        cfg: <Self as Interface>::Cfg,
+        flags: ffi::vpx_codec_flags_t,
+    ) -> Result<<Self as Interface>::Context, Error>;
 }
 #[doc(hidden)]
 pub trait InternalInterface {
     fn iface(&self) -> *mut ffi::vpx_codec_iface_t;
 }
-
 
 /*#[derive(Copy, Clone)]
 pub struct VP8DecoderInterface;

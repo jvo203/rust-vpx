@@ -1,5 +1,5 @@
-use crate::ffi;
 use super::{Error, Frame, Image};
+use crate::ffi;
 
 use libc;
 
@@ -15,21 +15,23 @@ pub struct FrameFlags {
 }
 impl Default for FrameFlags {
     fn default() -> FrameFlags {
-        FrameFlags {
-            keyframe: false,
-        }
+        FrameFlags { keyframe: false }
     }
 }
 #[doc(hidden)]
 impl Into<ffi::vpx_enc_frame_flags_t> for FrameFlags {
     fn into(self) -> ffi::vpx_enc_frame_flags_t {
         let mut flags: ffi::vpx_enc_frame_flags_t = 0;
-        if self.keyframe { flags |= 1 << 0; }
+        if self.keyframe {
+            flags |= 1 << 0;
+        }
         return flags;
     }
 }
 impl FrameFlags {
-    pub fn new() -> FrameFlags { Default::default() }
+    pub fn new() -> FrameFlags {
+        Default::default()
+    }
 
     pub fn keyframe(mut self, keyframe: bool) -> FrameFlags {
         self.keyframe = keyframe;
@@ -38,14 +40,13 @@ impl FrameFlags {
 }
 
 pub trait Encoder: InternalEncoder
-    where <Self as Encoder>::Cfg: AsRef<ffi::vpx_codec_enc_cfg_t>,
+where
+    <Self as Encoder>::Cfg: AsRef<ffi::vpx_codec_enc_cfg_t>,
 {
     type Cfg;
     fn set_cfg(&mut self, cfg: Self::Cfg) -> Result<(), Error> {
-        let res = unsafe {
-            ffi::vpx_codec_enc_config_set(self.get_mut_ctx(),
-                                          cfg.as_ref() as *const _)
-        };
+        let res =
+            unsafe { ffi::vpx_codec_enc_config_set(self.get_mut_ctx(), cfg.as_ref() as *const _) };
         if res == ffi::VPX_CODEC_OK {
             Ok(())
         } else {
@@ -54,18 +55,23 @@ pub trait Encoder: InternalEncoder
     }
 
     /// `duration` must be non-zero.
-    fn encode(&mut self, image: &Image,
-              pts: ffi::vpx_codec_pts_t,
-              duration: u64,
-              flags: FrameFlags,
-              deadline: u64) -> Result<(), Error> {
+    fn encode(
+        &mut self,
+        image: &Image,
+        pts: ffi::vpx_codec_pts_t,
+        duration: u64,
+        flags: FrameFlags,
+        deadline: u64,
+    ) -> Result<(), Error> {
         let res = unsafe {
-            ffi::vpx_codec_encode(self.get_mut_ctx(),
-                                  &image.0 as *const _,
-                                  pts,
-                                  duration as libc::c_ulong,
-                                  flags.into(),
-                                  deadline as libc::c_ulong)
+            ffi::vpx_codec_encode(
+                self.get_mut_ctx(),
+                &image.0 as *const _,
+                pts,
+                duration as libc::c_ulong,
+                flags.into(),
+                deadline as libc::c_ulong,
+            )
         };
         if res != ffi::VPX_CODEC_OK {
             Err(From::from(res))
@@ -75,17 +81,22 @@ pub trait Encoder: InternalEncoder
     }
 
     /// Call once there are no more frames to encode.
-    fn flush(&mut self,
-             pts: ffi::vpx_codec_pts_t,
-             duration: u64,
-             flags: ffi::vpx_enc_frame_flags_t,
-             deadline: u64) -> Result<(), Error>
-    {
+    fn flush(
+        &mut self,
+        pts: ffi::vpx_codec_pts_t,
+        duration: u64,
+        flags: ffi::vpx_enc_frame_flags_t,
+        deadline: u64,
+    ) -> Result<(), Error> {
         let res = unsafe {
-            ffi::vpx_codec_encode(self.get_mut_ctx(),
-                                  0 as *const _,
-                                  pts, duration as libc::c_ulong,
-                                  flags, deadline as libc::c_ulong)
+            ffi::vpx_codec_encode(
+                self.get_mut_ctx(),
+                0 as *const _,
+                pts,
+                duration as libc::c_ulong,
+                flags,
+                deadline as libc::c_ulong,
+            )
         };
         if res == ffi::VPX_CODEC_OK {
             Ok(())
@@ -100,34 +111,37 @@ pub trait Encoder: InternalEncoder
         let mut iter: ffi::vpx_codec_iter_t = 0 as *mut _;
         unsafe {
             loop {
-                let pkt = ffi::vpx_codec_get_cx_data(self.get_mut_ctx(),
-                                                     &mut iter as *mut _);
-                if pkt.is_null() { return Ok(()); }
+                let pkt = ffi::vpx_codec_get_cx_data(self.get_mut_ctx(), &mut iter as *mut _);
+                if pkt.is_null() {
+                    return Ok(());
+                }
 
                 let pkt: &ffi::vpx_codec_cx_pkt_t = transmute(pkt);
                 match pkt.kind {
-                    ffi::vpx_codec_cx_pkt_kind::VPX_CODEC_CX_FRAME_PKT => {                        
-                        let frame: &ffi::vpx_codec_cx_pkt__bindgen_ty_1__bindgen_ty_1 = transmute(&pkt.data.frame);
+                    ffi::vpx_codec_cx_pkt_kind::VPX_CODEC_CX_FRAME_PKT => {
+                        let frame: &ffi::vpx_codec_cx_pkt__bindgen_ty_1__bindgen_ty_1 =
+                            transmute(&pkt.data.frame);
                         let frame: Frame = From::from(frame);
                         dest.write_frame(&frame)?;
-                    },
-                    ffi::vpx_codec_cx_pkt_kind::VPX_CODEC_STATS_PKT => {                        
+                    }
+                    ffi::vpx_codec_cx_pkt_kind::VPX_CODEC_STATS_PKT => {
                         let buf: &ffi::vpx_fixed_buf_t = transmute(&pkt.data.twopass_stats);
                         let buf = from_raw_parts(buf.buf as *const u8, buf.sz as usize);
                         dest.write_two_pass_stats(buf)?;
-                    },
-                    ffi::vpx_codec_cx_pkt_kind::VPX_CODEC_FPMB_STATS_PKT => {                        
+                    }
+                    ffi::vpx_codec_cx_pkt_kind::VPX_CODEC_FPMB_STATS_PKT => {
                         let buf: &ffi::vpx_fixed_buf_t = transmute(&pkt.data.twopass_stats);
                         let buf = from_raw_parts(buf.buf as *const u8, buf.sz as usize);
                         dest.write_two_pass_stats(buf)?;
-                    },
-                    ffi::vpx_codec_cx_pkt_kind::VPX_CODEC_PSNR_PKT => {                        
-                        let psnr: &ffi::vpx_codec_cx_pkt__bindgen_ty_1_vpx_psnr_pkt = transmute(&pkt.data.psnr);
+                    }
+                    ffi::vpx_codec_cx_pkt_kind::VPX_CODEC_PSNR_PKT => {
+                        let psnr: &ffi::vpx_codec_cx_pkt__bindgen_ty_1_vpx_psnr_pkt =
+                            transmute(&pkt.data.psnr);
                         dest.write_psnr(&psnr.samples, &psnr.sse, &psnr.psnr)?;
-                    },
+                    }
                     kind => {
                         dest.write_custom(kind, &pkt.data)?;
-                    },
+                    }
                 }
             }
         }
@@ -141,12 +155,28 @@ pub trait InternalEncoder {
 }
 
 pub trait PacketWriter {
-    fn write_frame<'a>(&mut self, _frame: &Frame<'a>) -> Result<(), ::std::io::Error> { Ok(()) }
-    fn write_two_pass_stats(&mut self, _stats: &[u8]) -> Result<(), ::std::io::Error> { Ok(()) }
-    fn write_first_pass_mb_stats(&mut self, _stats: &[u8]) -> Result<(), ::std::io::Error> { Ok(()) }
-    fn write_psnr(&mut self, _samples: &[u32; 4], _sse: &[u64; 4],
-                  _psnr: &[f64; 4]) -> Result<(), ::std::io::Error> { Ok(()) }
-    fn write_custom(&mut self,
-                    _kind: ffi::vpx_codec_cx_pkt_kind,
-                    _data: &ffi::vpx_codec_cx_pkt__bindgen_ty_1) -> Result<(), ::std::io::Error> { Ok(()) }
+    fn write_frame<'a>(&mut self, _frame: &Frame<'a>) -> Result<(), ::std::io::Error> {
+        Ok(())
+    }
+    fn write_two_pass_stats(&mut self, _stats: &[u8]) -> Result<(), ::std::io::Error> {
+        Ok(())
+    }
+    fn write_first_pass_mb_stats(&mut self, _stats: &[u8]) -> Result<(), ::std::io::Error> {
+        Ok(())
+    }
+    fn write_psnr(
+        &mut self,
+        _samples: &[u32; 4],
+        _sse: &[u64; 4],
+        _psnr: &[f64; 4],
+    ) -> Result<(), ::std::io::Error> {
+        Ok(())
+    }
+    fn write_custom(
+        &mut self,
+        _kind: ffi::vpx_codec_cx_pkt_kind,
+        _data: &ffi::vpx_codec_cx_pkt__bindgen_ty_1,
+    ) -> Result<(), ::std::io::Error> {
+        Ok(())
+    }
 }

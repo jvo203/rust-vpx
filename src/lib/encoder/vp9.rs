@@ -1,6 +1,6 @@
 use crate::ffi;
 
-use crate::{InternalInterface, Error, Kind};
+use crate::{Error, InternalInterface, Kind};
 
 use std::ops::{Deref, DerefMut};
 
@@ -10,11 +10,8 @@ impl Default for Cfg {
     fn default() -> Cfg {
         let interface: Interface = Default::default();
         let mut cfg: ffi::vpx_codec_enc_cfg_t = Default::default();
-        let err = unsafe {
-            ffi::vpx_codec_enc_config_default(interface.iface(),
-                                              &mut cfg as *mut _,
-                                              0)
-        };
+        let err =
+            unsafe { ffi::vpx_codec_enc_config_default(interface.iface(), &mut cfg as *mut _, 0) };
         assert_eq!(err, ffi::VPX_CODEC_OK);
         Cfg(cfg)
     }
@@ -51,19 +48,24 @@ impl Default for Interface {
 impl crate::Interface for Interface {
     type Context = Context;
     type Cfg = Cfg;
-    fn kind(&self) -> Kind { Kind::Encoder }
+    fn kind(&self) -> Kind {
+        Kind::Encoder
+    }
 
-    fn create(&self, cfg: <Self as crate::Interface>::Cfg,
-              flags: ffi::vpx_codec_flags_t) ->
-        Result<<Self as crate::Interface>::Context, Error>
-    {
+    fn create(
+        &self,
+        cfg: <Self as crate::Interface>::Cfg,
+        flags: ffi::vpx_codec_flags_t,
+    ) -> Result<<Self as crate::Interface>::Context, Error> {
         let mut ctx: ffi::vpx_codec_ctx_t = Default::default();
         let err = unsafe {
-            ffi::vpx_codec_enc_init_ver(&mut ctx as *mut _,
-                                        self.iface(),
-                                        &cfg.0 as *const _,
-                                        flags,
-                                        ffi::VPX_ENCODER_ABI_VERSION as i32)
+            ffi::vpx_codec_enc_init_ver(
+                &mut ctx as *mut _,
+                self.iface(),
+                &cfg.0 as *const _,
+                flags,
+                ffi::VPX_ENCODER_ABI_VERSION as i32,
+            )
         };
         if err != ffi::VPX_CODEC_OK {
             Err(From::from(err))
@@ -74,7 +76,7 @@ impl crate::Interface for Interface {
 }
 impl InternalInterface for Interface {
     fn iface(&self) -> *mut ffi::vpx_codec_iface_t {
-        unsafe { &mut ffi::vpx_codec_vp9_cx_algo as *mut _ }
+        &raw mut ffi::vpx_codec_vp9_cx_algo as *mut _
     }
 }
 
